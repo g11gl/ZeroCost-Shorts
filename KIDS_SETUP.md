@@ -5,12 +5,13 @@
 ## قواعد الأمان قبل النشر العام
 
 - كل فيديو من إعداد `kids_learning` يُرسل إلى YouTube مع `selfDeclaredMadeForKids: true` وفئة التعليم `27`.
+- قبل أي رفع للأطفال، يتحقق البرنامج من أن رمز OAuth يخص قناة **حروفف والوانن** `@HurooffAlwann` (المعرّف `UCp54Cb0oNUWfuyf39tS1rCA`)، ويرفض الرفع إذا كان يخص قناة مختلفة. يتطلب هذا منح `youtube.upload` و`youtube.readonly` معًا عند الربط.
 - الرفع التلقائي مجدول الساعة **20:17 بتوقيت السعودية** (17:17 UTC) ويكون **Private** فقط. قد يتأخر موعد تشغيل GitHub Actions قليلًا.
 - تشغيل `Run workflow` يدويًا يبدأ باختبار إعداد فقط (`smoke_test_only = true`) من دون أي مفاتيح. بعد إضافة `GROQ_API_KEY` و`DEAPI_TOKEN` يمكن إلغاء هذا الخيار لتوليد MP4 والاحتفاظ به في Artifacts. يمكن تحديد `upload_to_youtube` لرفع نسخة **خاصة** بعد إكمال OAuth.
 - يمنع أمر `--privacy public` لمحتوى الأطفال ما لم تضف `--allow-public-kids` صراحة بعد مراجعة الفيديو. لا يوجد هذا الخيار في التشغيل المجدول.
 - جرى تعطيل تشغيل ملفي `daily_facts.yml` و`daily_myth.yml` القديمين (بلا جدول زمني ومع `if: false`) حتى لا ينشرا فيديوهات غير موجهة للأطفال عند تفعيل GitHub Actions.
 - راجع الحروف والنطق، صحة عدد العناصر والألوان في صور AI، وضوح النصوص العربية، مدة الصوت، حقوق الملكية، وأي معلومة غير مناسبة قبل التفكير في النشر العام.
-- لأن جميع فيديوهات هذه القناة للأطفال، يُستحسن أيضًا ضبط جمهور القناة من **YouTube Studio → Settings → Channel → Advanced settings → Audience → Yes, set this channel as made for kids**. لا يحل هذا محل ضبط كل فيديو الذي يتولاه الكود.
+- تم ضبط جمهور قناة **حروفف والوانن** بالفعل على **Made for Kids** في استوديو YouTube؛ يحتفظ الكود أيضًا بالتصنيف لكل فيديو على حدة.
 
 ## خدمات مطلوبة (تُضاف كـ GitHub Actions Secrets)
 
@@ -26,12 +27,12 @@
 
 خدمات الصور والنصوص قد تكون لها حدود مجانية أو تكاليف؛ راجع حسابك قبل تفعيل التشغيل اليومي. **لا تُرسل المفاتيح أو رموز OAuth في المحادثة ولا تضعها في ملفات GitHub العامة.**
 
-لإعداد OAuth على جهازك فقط: فعّل [YouTube Data API v3](https://console.cloud.google.com/apis/library/youtube.googleapis.com) ثم أنشئ OAuth Client ID لنوع **Desktop app**، وضع الملف الذي نزلته في `secrets/client_secret.json`، وشغّل `python scripts/youtube_auth.py` بعد تثبيت `requirements.txt`. انسخ القيم الثلاث المطلوبة إلى Secrets. انتبه أن تطبيقات OAuth التي لا تزال في وضع Testing قد تحتاج إعادة تفويض لاحقًا.
+لإعداد OAuth على جهازك فقط: فعّل [YouTube Data API v3](https://console.cloud.google.com/apis/library/youtube.googleapis.com) ثم أنشئ OAuth Client ID لنوع **Desktop app**، وضع الملف الذي نزلته في `secrets/client_secret.json`، وشغّل `python scripts/youtube_auth.py` بعد تثبيت `requirements.txt`. يرفض السكربت حفظ الرمز إذا اخترت قناة غير «حروفف والوانن». انسخ القيم الثلاث المطلوبة إلى Secrets. انتبه أن تطبيقات OAuth التي لا تزال في وضع Testing قد تحتاج إعادة تفويض لاحقًا.
 
 ## الاختبار قبل النشر
 
 1. من قسم **Actions** فعّل Workflows إن كان GitHub يطلب ذلك للـ fork.
-2. افتح **Daily YouTube Short → Run workflow**، واترك `smoke_test_only` محددًا لأول اختبار بلا مفاتيح. يجب أن تنجح الاختبارات الثلاثة.
+2. افتح **Daily YouTube Short → Run workflow**، واترك `smoke_test_only` محددًا لأول اختبار بلا مفاتيح. يجب أن تنجح الاختبارات الخمسة.
 3. بعد إضافة مفاتيح توليد النص والصور، كرر التشغيل وألغِ `smoke_test_only` واكتب موضوعًا مثل `الحرف أ: أرنب وأسد`، واترك `upload_to_youtube` غير محدد. بعد نجاحه حمّل **kids-review-...** من قسم Artifacts وراجع الفيديو.
 4. راجع جودة الفيديو. إذا كان مناسبًا، كرر التشغيل مع تحديد `upload_to_youtube` بعد إكمال OAuth، وسيكون الفيديو **Private**.
 5. من YouTube Studio تحقق من أن جمهور الفيديو **Made for Kids** وأن مستوى الخصوصية **Private**؛ ثم قرر يدويًا متى يصبح النشر العام مناسبًا. لا يُفعّل الكود النشر العام تلقائيًا.
