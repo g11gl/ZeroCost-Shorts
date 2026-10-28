@@ -2,17 +2,22 @@ name: Daily YouTube Short
 
 on:
   schedule:
-        - cron: "17 17 * * *"
+    # 20:17 Saudi Arabia time; GitHub runs on UTC and may delay scheduled jobs.
+    - cron: "17 17 * * *"
   workflow_dispatch:
     inputs:
-      channel:
-        description: "Channel preset (ghost_stories, facts, school_story, etc.)"
-        required: true
-        default: "ghost_stories"
       topic:
-        description: "Optional topic hint"
+        description: "Optional Arabic lesson topic (letters, numbers, or colors)"
         required: false
         default: ""
+      upload_to_youtube:
+        description: "Upload as PRIVATE for review (never public)"
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: read
 
 env:
   GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
@@ -20,12 +25,14 @@ env:
   YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
   YT_CLIENT_SECRET_VALUE: ${{ secrets.YT_CLIENT_SECRET_VALUE }}
   YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
-  EDGE_TTS_VOICE: "en-US-ChristopherNeural"
+  EDGE_TTS_VOICE: "ar-SA-ZariyahNeural"
+  DEAPI_IMAGE_WIDTH: "768"
+  DEAPI_IMAGE_HEIGHT: "1344"
 
 jobs:
   generate-and-upload:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 45
 
     steps:
       - name: Checkout
@@ -37,31 +44,46 @@ jobs:
           python-version: "3.12"
           cache: "pip"
 
-      - name: Install ffmpeg
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Install ffmpeg and Arabic subtitle fonts
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg fonts-noto-core
 
       - name: Install Python deps
         run: pip install -r requirements.txt
+
+      - name: Verify kids settings before any generation or upload
+        run: python -m unittest discover -s tests -v
 
       # Restore story history from previous runs (prevents repeats)
       - name: Restore history cache
         uses: actions/cache/restore@v4
         with:
           path: output/history/
-          key: story-history-${{ github.event.inputs.channel || 'ghost_stories' }}-${{ github.run_id }}
+          key: story-history-kids_learning-${{ github.run_id }}
           restore-keys: |
-            story-history-${{ github.event.inputs.channel || 'ghost_stories' }}-
+            story-history-kids_learning-
 
-      - name: Generate & upload Short
+      - name: Generate children's Arabic Short and optionally upload privately
         run: |
-          CHANNEL="${{ github.event.inputs.channel || 'ghost_stories' }}"
           TOPIC="${{ github.event.inputs.topic || '' }}"
+          UPLOAD="${{ github.event_name == 'schedule' || inputs.upload_to_youtube }}"
+          ARGS=(--channel kids_learning)
 
           if [ -n "$TOPIC" ]; then
-            python scripts/run_short.py --channel "$CHANNEL" --topic "$TOPIC" --upload --privacy public
-          else
-            python scripts/run_short.py --channel "$CHANNEL" --upload --privacy public
+            ARGS+=(--topic "$TOPIC")
           fi
+          if [ "$UPLOAD" = "true" ]; then
+            ARGS+=(--upload --privacy private)
+          fi
+          python scripts/run_short.py "${ARGS[@]}"
+
+      - name: Keep preview for manual review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kids-review-${{ github.run_id }}
+          path: output/runs/kids_learning_*/short.mp4
+          if-no-files-found: warn
+          retention-days: 7
 
       # Save history so next run knows what stories already exist
       - name: Save history cache
@@ -69,4 +91,4 @@ jobs:
         if: always()
         with:
           path: output/history/
-          key: story-history-${{ github.event.inputs.channel || 'ghost_stories' }}-${{ github.run_id }}
+          key: story-history-kids_learning-${{ github.run_id }}
