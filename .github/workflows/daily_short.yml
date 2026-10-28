@@ -15,6 +15,11 @@ on:
         type: boolean
         required: false
         default: false
+      smoke_test_only:
+        description: "Only run setup tests (no API keys or video needed)"
+        type: boolean
+        required: false
+        default: true
 
 permissions:
   contents: read
@@ -53,8 +58,19 @@ jobs:
       - name: Verify kids settings before any generation or upload
         run: python -m unittest discover -s tests -v
 
+      - name: Check generation API keys
+        id: prerequisites
+        run: |
+          if [ -n "$GROQ_API_KEY" ] && [ -n "$DEAPI_TOKEN" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Set GROQ_API_KEY and DEAPI_TOKEN as repository secrets to generate videos"
+          fi
+
       # Restore story history from previous runs (prevents repeats)
       - name: Restore history cache
+        if: steps.prerequisites.outputs.ready == 'true' && (github.event_name == 'schedule' || !inputs.smoke_test_only)
         uses: actions/cache/restore@v4
         with:
           path: output/history/
@@ -63,6 +79,7 @@ jobs:
             story-history-kids_learning-
 
       - name: Generate children's Arabic Short and optionally upload privately
+        if: steps.prerequisites.outputs.ready == 'true' && (github.event_name == 'schedule' || !inputs.smoke_test_only)
         run: |
           TOPIC="${{ github.event.inputs.topic || '' }}"
           UPLOAD="${{ github.event_name == 'schedule' || inputs.upload_to_youtube }}"
@@ -72,7 +89,11 @@ jobs:
             ARGS+=(--topic "$TOPIC")
           fi
           if [ "$UPLOAD" = "true" ]; then
-            ARGS+=(--upload --privacy private)
+            if [ -n "$YT_CLIENT_ID" ] && [ -n "$YT_CLIENT_SECRET_VALUE" ] && [ -n "$YT_REFRESH_TOKEN" ]; then
+              ARGS+=(--upload --privacy private)
+            else
+              echo "::warning::YouTube OAuth secrets missing; generating review MP4 without upload"
+            fi
           fi
           python scripts/run_short.py "${ARGS[@]}"
 
@@ -88,7 +109,7 @@ jobs:
       # Save history so next run knows what stories already exist
       - name: Save history cache
         uses: actions/cache/save@v4
-        if: always()
+        if: always() && steps.prerequisites.outputs.ready == 'true' && (github.event_name == 'schedule' || !inputs.smoke_test_only)
         with:
           path: output/history/
           key: story-history-kids_learning-${{ github.run_id }}
