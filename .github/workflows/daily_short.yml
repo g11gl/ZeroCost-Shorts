@@ -2,8 +2,7 @@ name: Daily YouTube Short
 
 on:
   schedule:
-    - cron: "0 10 * * *"
-    - cron: "30 23 * * *" 
+        - cron: "17 17 * * *"
   workflow_dispatch:
     inputs:
       channel:
