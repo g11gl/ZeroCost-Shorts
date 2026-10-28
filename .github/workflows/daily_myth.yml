@@ -1,10 +1,7 @@
 name: Daily Hindi Myth Short
 
 on:
-  schedule:
-    # 06:30 IST = 01:00 UTC; 18:30 IST = 13:00 UTC
-    - cron: "0 1 * * *"
-    - cron: "0 13 * * *"
+  # Disabled legacy workflow: dedicated channel now publishes only kids_learning.
   workflow_dispatch:
     inputs:
       topic:
@@ -25,6 +22,7 @@ env:
 
 jobs:
   generate-and-upload:
+    if: false  # Retained for reference; must not upload non-kids videos.
     runs-on: ubuntu-latest
     timeout-minutes: 25
 

@@ -1,10 +1,7 @@
 name: Daily Facts Short
 
 on:
-  schedule:
-    # Pick a time offset from the ghost_stories workflow to avoid overlap.
-    - cron: "0 4 * * *"   # 04:00 UTC ≈ 09:30 IST
-    - cron: "0 14 * * *"  # 14:00 UTC ≈ 19:30 IST
+  # Disabled legacy workflow: dedicated channel now publishes only kids_learning.
   workflow_dispatch:
     inputs:
       topic:
@@ -26,6 +23,7 @@ env:
 
 jobs:
   generate-and-upload:
+    if: false  # Retained for reference; must not upload non-kids videos.
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
