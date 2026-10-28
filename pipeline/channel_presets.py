@@ -42,9 +42,74 @@ class ChannelPreset(TypedDict, total=False):
     yt_token_env: str
     # Extra uploads: same MP4 uploaded to additional channels using these env var names
     extra_yt_token_envs: list[str]
+    # Explicit per-video audience declaration for YouTube uploads.
+    made_for_kids: bool
+    category_id: str
 
 
 PRESETS: dict[str, ChannelPreset] = {
+    "kids_learning": {
+        "id": "kids_learning",
+        "label": "دقيقة تعلّم للأطفال: حروف وأرقام وألوان (العمر 6–9 سنوات)",
+        "language": "ar",
+        "tts_voice": "ar-SA-ZariyahNeural",
+        "caption_font": "",
+        "caption_font_name": "Noto Sans Arabic",
+        "min_words": 60,
+        "made_for_kids": True,
+        "category_id": "27",  # Education
+        "segment_count": 5,
+        "groq_system_hint": (
+            "You are a careful Arabic primary-school educator writing an original, "
+            "age-appropriate YouTube Short for children aged 6-9. "
+            "Teach exactly ONE small concept from Arabic letters, numbers, or colors. "
+            "Use simple, correct Modern Standard Arabic with short, warm, lively sentences. "
+            "Start with a friendly question, show clear examples from daily life, "
+            "invite the child to think, then give the answer and a positive recap. "
+            "For letters, pronounce the letter accurately and provide familiar words; "
+            "for numbers, count concrete objects correctly; for colors, use common "
+            "objects whose colors are unambiguous. Do not invent facts or miscount. "
+            "No advertisements, brands, copyrighted characters, scary themes, violence, "
+            "dangerous activities, requests for personal information, external links, "
+            "or instructions to buy or subscribe. Do not address parents as viewers. "
+            "The full_narration, youtube_title, youtube_description MUST be entirely "
+            "in natural Arabic (except the #Shorts tag). "
+            "The image_prompts MUST be ENGLISH ONLY and describe five DIFFERENT "
+            "clear scenes showing the lesson. Show friendly original 3D cartoon "
+            "characters and colorful objects. Prefer one object group per image. "
+            "Keep object counts small and visually countable. No written text, "
+            "letters, digits, watermarks, brands or logos baked into images."
+        ),
+        "image_style_suffix": (
+            ", bright high-quality 3D cartoon illustration for an Arabic primary "
+            "school educational short, original friendly rounded characters, "
+            "colorful toy-like objects, soft studio lighting, cheerful clean "
+            "background, vibrant accurate colors, clear composition with room "
+            "for subtitles, polished children’s animation style, no text, "
+            "no captions, no letters, no numbers, no logos, no watermark"
+        ),
+        "image_negative_prompt": (
+            "photorealistic, horror, dark, scary, violence, weapon, injury, "
+            "uncanny faces, copyrighted characters, clutter, ads, logos, "
+            "written text, typography, digits, watermark, low quality, blurry"
+        ),
+        "topic_pool": [
+            "الحرف أ: أرنب وأسد", "الحرف ب: بطة وباب", "الحرف ت: تفاحة وتاج",
+            "الحرف ث: ثعلب وثوب", "الحرف ج: جمل وجزر", "الحرف ح: حصان وحليب",
+            "الحرف خ: خبز وخروف", "الحرف د: دجاجة ودفتر", "الحرف ر: رمان وريشة",
+            "الحرف س: سمكة وسيارة", "الحرف ش: شمس وشجرة", "الحرف ف: فراشة وفيل",
+            "الحرف ق: قمر وقلم", "الحرف ك: كتاب وكرة", "الحرف ل: ليمون ولعبة",
+            "الحرف م: موزة ومفتاح", "الحرف ن: نحلة ونجمة", "الحرف و: وردة وورق",
+            "الحرف ي: يد ويمامة", "العدد 1: شيء واحد حولنا",
+            "العدد 2: عد شيئين", "العدد 3: ثلاث كرات", "العدد 4: أربع زهرات",
+            "العدد 5: خمس نجوم", "الأعداد من 1 إلى 5: مراجعة سهلة",
+            "الأعداد من 6 إلى 10: العد بألعاب ملونة",
+            "اللون الأحمر: التفاح والفراولة", "اللون الأصفر: الموز والشمس",
+            "اللون الأزرق: السماء وبالون أزرق", "اللون الأخضر: العشب والأوراق",
+            "اللون البرتقالي: البرتقال والجزر", "اللون البنفسجي: العنب والزهور",
+            "اللون الأبيض والأسود: مقارنة بسيطة", "مزج الأزرق والأصفر: اللون الأخضر",
+        ],
+    },
     "facts": {
         "id": "facts",
         "label": "Mind-blowing facts Short (bilingual — Hindi + English)",

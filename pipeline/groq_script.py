@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from typing import Any
 
 from groq import Groq
@@ -20,6 +21,13 @@ GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
 
 # ── Language-specific word-count guidance ──────────────────────────────
 LANG_WORD_TARGETS = {
+    "ar": (
+        70,
+        100,
+        "70-100 Arabic words in simple Modern Standard Arabic for children aged 6-9 "
+        "(~35-50 seconds), with short sentences, a question, concrete examples, "
+        "a clearly explained answer and a gentle recap",
+    ),
     "en": (
         120,
         155,
@@ -34,11 +42,11 @@ LANG_WORD_TARGETS = {
 }
 
 # Bilingual presets override per variant; these are fallbacks only.
-DEFAULT_MIN_WORDS = {"hi": 80, "en": 80}
+DEFAULT_MIN_WORDS = {"hi": 80, "en": 80, "ar": 60}
 
 
 def _lang_label(lang: str) -> str:
-    return {"en": "English", "hi": "Hindi (Devanagari script)"}.get(lang, lang)
+    return {"en": "English", "hi": "Hindi (Devanagari script)", "ar": "Arabic"}.get(lang, lang)
 
 
 def generate_short_pack(
@@ -76,7 +84,21 @@ def _generate_single(preset: ChannelPreset, user: str, n: int) -> dict[str, Any]
     language = (preset.get("language") or "en").lower()
     lo, hi, blurb = LANG_WORD_TARGETS.get(language, LANG_WORD_TARGETS["en"])
 
-    if language == "hi":
+    if language == "ar":
+        narration_rule = (
+            '"full_narration": "A COMPLETE natural Arabic voiceover as ONE continuous '
+            f'paragraph. MUST be {blurb}. '
+            'Modern Standard Arabic only; clear correct pronunciation, no headings or '
+            'scene numbers. This is exactly what the child will hear."'
+        )
+        strict_extra = (
+            "- LANGUAGE: full_narration, youtube_title and youtube_description MUST be in Arabic.\n"
+            "- image_prompts MUST be in ENGLISH, describing only visual objects and actions.\n"
+            f"- WORD COUNT: full_narration MUST have {lo}-{hi} Arabic words.\n"
+            "- Explain exactly one age-appropriate learning goal, use accurate examples, "
+            "and check that every number, color and letter mentioned is correct.\n"
+        )
+    elif language == "hi":
         narration_rule = (
             '"full_narration": "COMPLETE narration as ONE continuous paragraph in Devanagari Hindi. '
             f'This is what the voice will read aloud. MUST be {blurb}. '
@@ -132,6 +154,11 @@ STRICT RULES:
             narration = data.get("full_narration", "").strip()
             if not narration:
                 raise ValueError("Missing full_narration")
+            if language == "ar":
+                for field in ("full_narration", "youtube_title", "youtube_description"):
+                    value = data.get(field, "")
+                    if not isinstance(value, str) or not re.search(r"[\u0600-\u06FF]", value):
+                        raise ValueError(f"{field} must contain Arabic text")
 
             prompts = data.get("image_prompts")
             if not isinstance(prompts, list) or len(prompts) != n:

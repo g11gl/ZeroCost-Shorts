@@ -16,6 +16,7 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
+from pipeline.youtube_metadata import build_upload_body
 
 SCOPES = ["https://www.googleapis.com/auth/youtube.upload"]
 TOKEN_URI = "https://oauth2.googleapis.com/token"
@@ -97,6 +98,7 @@ def upload_short(
     privacy_status: str = "private",
     category_id: str = "24",
     refresh_token_env: str = "YT_REFRESH_TOKEN",
+    made_for_kids: bool = False,
 ) -> str:
     """Upload and return YouTube video ID.
 
@@ -106,17 +108,12 @@ def upload_short(
     creds = _get_creds(refresh_token_env)
     youtube = build("youtube", "v3", credentials=creds)
 
-    body = {
-        "snippet": {
-            "title": title[:100],
-            "description": description[:5000],
-            "categoryId": category_id,
-        },
-        "status": {
-            "privacyStatus": privacy_status,
-            "selfDeclaredMadeForKids": False,
-        },
-    }
+    body = build_upload_body(
+        title, description,
+        privacy_status=privacy_status,
+        category_id=category_id,
+        made_for_kids=made_for_kids,
+    )
     media = MediaFileUpload(str(video_path), chunksize=-1, resumable=True, mimetype="video/mp4")
     req = youtube.videos().insert(part="snippet,status", body=body, media_body=media)
     response = None

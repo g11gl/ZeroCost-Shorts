@@ -95,7 +95,8 @@ def render_vertical_short(
     shutil.copyfile(srt_path, tmp / "captions.srt")
 
     font_path = FONTS_DIR / font_file
-    rendered_font_name = "Arial"
+    # An installed system font may be selected without bundling a font file.
+    rendered_font_name = font_name or "Arial"
     fontsdir_arg = ""
     if font_path.is_file():
         font_dir = tmp / "_fonts"
@@ -104,7 +105,7 @@ def render_vertical_short(
         rendered_font_name = font_name
         fontsdir_arg = ":fontsdir='_fonts'"
     else:
-        print(f"   ⚠ Font {font_path} not found — using {rendered_font_name}")
+        print(f"   ℹ Bundled font {font_path} not found — requesting system font {rendered_font_name}")
 
     force_style = (
         f"FontName={rendered_font_name},"
