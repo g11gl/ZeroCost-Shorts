@@ -3,6 +3,7 @@
 import unittest
 
 from pipeline.channel_presets import get_preset
+from pipeline.youtube_destination import KIDS_CHANNEL_ID, verify_kids_channel
 from pipeline.youtube_metadata import build_upload_body
 
 
@@ -31,6 +32,16 @@ class KidsSetupTests(unittest.TestCase):
     def test_other_channels_keep_separate_audience_setting(self):
         body = build_upload_body("Other video", "Description")
         self.assertIs(body["status"]["selfDeclaredMadeForKids"], False)
+
+    def test_kids_channel_id_is_fixed_and_authorized(self):
+        self.assertEqual(KIDS_CHANNEL_ID, "UCp54Cb0oNUWfuyf39tS1rCA")
+        verify_kids_channel({"items": [{"id": KIDS_CHANNEL_ID}]})
+
+    def test_wrong_channel_or_no_channel_is_rejected(self):
+        with self.assertRaisesRegex(RuntimeError, "not authorized"):
+            verify_kids_channel({"items": [{"id": "UC_wrong_channel"}]})
+        with self.assertRaisesRegex(RuntimeError, "not authorized"):
+            verify_kids_channel({"items": []})
 
 
 if __name__ == "__main__":
