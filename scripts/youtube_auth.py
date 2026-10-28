@@ -1,16 +1,8 @@
 #!/usr/bin/env python3
-"""
-Run this ONCE on your local machine to get a YouTube OAuth refresh token.
-Then store the token file path (or its contents) as a GitHub Actions secret.
+"""Authorize the intended YouTube channel on your own computer.
 
-Usage:
-  .venv/bin/python scripts/youtube_auth.py
-
-Prerequisites:
-  1. Google Cloud Console → create project → enable "YouTube Data API v3"
-     https://console.cloud.google.com/apis/library/youtube.googleapis.com
-  2. Credentials → Create OAuth client ID → Desktop app → Download JSON
-  3. Save that JSON as  secrets/client_secret.json  (gitignored)
+Requires a local OAuth Desktop client JSON under secrets/client_secret.json.
+The two scopes allow private video upload and verification of the channel ID.
 """
 from __future__ import annotations
 
@@ -25,8 +17,13 @@ sys.path.insert(0, str(REPO_ROOT))
 load_dotenv(REPO_ROOT / ".env")
 
 from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
+from pipeline.youtube_destination import verify_kids_channel
 
-SCOPES = ["https://www.googleapis.com/auth/youtube.upload"]
+SCOPES = [
+    "https://www.googleapis.com/auth/youtube.upload",
+    "https://www.googleapis.com/auth/youtube.readonly",
+]
 SECRETS = REPO_ROOT / "secrets"
 
 
@@ -36,14 +33,11 @@ def main() -> None:
 
     if not client_secret.is_file():
         print(
-            "❌ Missing secrets/client_secret.json\n\n"
-            "Steps:\n"
-            "  1. Go to https://console.cloud.google.com/\n"
-            "  2. Create a project (or pick one)\n"
-            "  3. Enable YouTube Data API v3:\n"
-            "     https://console.cloud.google.com/apis/library/youtube.googleapis.com\n"
-            "  4. Go to Credentials → Create OAuth client ID → Desktop app\n"
-            "  5. Download JSON → save as secrets/client_secret.json\n"
+            "Missing secrets/client_secret.json\n\n"
+            "1. Enable YouTube Data API v3:\n"
+            "   https://console.cloud.google.com/apis/library/youtube.googleapis.com\n"
+            "2. Create an OAuth client ID for a Desktop application.\n"
+            "3. Save the downloaded JSON as secrets/client_secret.json.\n"
         )
         sys.exit(1)
 
@@ -51,18 +45,20 @@ def main() -> None:
     flow = InstalledAppFlow.from_client_secrets_file(str(client_secret), SCOPES)
     creds = flow.run_local_server(port=0)
 
+    # Do not retain or export a token that points at another channel.
+    youtube = build("youtube", "v3", credentials=creds)
+    verify_kids_channel(youtube.channels().list(part="id", mine=True).execute())
+
     SECRETS.mkdir(parents=True, exist_ok=True)
     token_out.write_text(creds.to_json(), encoding="utf-8")
-    print(f"\n✅ Token saved to {token_out}")
+    print(f"\nVerified kids channel; OAuth token saved to {token_out}")
 
-    # Also print the refresh token so user can add it to GitHub Secrets
     token_data = json.loads(creds.to_json())
-    print("\n── For GitHub Actions ──")
-    print("Add these as Repository Secrets (Settings → Secrets → Actions):\n")
+    print("\nAdd these as repository GitHub Actions secrets (do not commit them):")
     print(f"  YT_REFRESH_TOKEN = {token_data.get('refresh_token', '???')}")
-    print(f"  YT_CLIENT_ID     = {token_data.get('client_id', '???')}")
+    print(f"  YT_CLIENT_ID = {token_data.get('client_id', '???')}")
     print(f"  YT_CLIENT_SECRET_VALUE = {token_data.get('client_secret', '???')}")
-    print("\nDone. Never commit secrets/ to git.")
+    print("Never paste these values into public files or chat.")
 
 
 if __name__ == "__main__":
