@@ -16,9 +16,13 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
+from pipeline.youtube_destination import verify_kids_channel
 from pipeline.youtube_metadata import build_upload_body
 
-SCOPES = ["https://www.googleapis.com/auth/youtube.upload"]
+SCOPES = [
+    "https://www.googleapis.com/auth/youtube.upload",
+    "https://www.googleapis.com/auth/youtube.readonly",  # verify the channel before upload
+]
 TOKEN_URI = "https://oauth2.googleapis.com/token"
 
 
@@ -107,6 +111,12 @@ def upload_short(
     """
     creds = _get_creds(refresh_token_env)
     youtube = build("youtube", "v3", credentials=creds)
+
+    if made_for_kids:
+        # Never upload to a different channel accidentally, even as Private.
+        # A refresh token can belong to another channel on the same Google account.
+        result = youtube.channels().list(part="id", mine=True).execute()
+        verify_kids_channel(result)
 
     body = build_upload_body(
         title, description,
