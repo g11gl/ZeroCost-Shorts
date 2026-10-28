@@ -67,6 +67,8 @@ def _render_and_upload(
     upload: bool,
     privacy: str,
     yt_token_env: str = "YT_REFRESH_TOKEN",
+    made_for_kids: bool = False,
+    category_id: str = "24",
 ) -> Path:
     """Render one video (audio + SRT + MP4) for a single variant. Optionally upload."""
     print(f"\n━━━ Variant: {variant_label} ━━━")
@@ -99,6 +101,8 @@ def _render_and_upload(
             video_path, title, description,
             privacy_status=privacy,
             refresh_token_env=yt_token_env,
+            made_for_kids=made_for_kids,
+            category_id=category_id,
         )
         print(f"   Uploaded! https://www.youtube.com/shorts/{vid}")
     else:
@@ -113,9 +117,15 @@ def main() -> None:
     ap.add_argument("--topic", default="", help="Optional topic hint for Groq.")
     ap.add_argument("--upload", action="store_true", help="Upload to YouTube after render.")
     ap.add_argument("--privacy", default="private", choices=["private", "unlisted", "public"])
+    ap.add_argument(
+        "--allow-public-kids", action="store_true",
+        help="Explicitly allow public children's videos after review; never used by the test workflow.",
+    )
     args = ap.parse_args()
 
     preset = get_preset(args.channel)
+    if preset.get("made_for_kids") and args.upload and args.privacy == "public" and not args.allow_public_kids:
+        ap.error("Children's videos require --allow-public-kids for public uploads after review")
     ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     run_dir = REPO_ROOT / "output" / "runs" / f"{args.channel}_{ts}"
     img_dir = run_dir / "images"
@@ -215,6 +225,8 @@ def main() -> None:
                 upload=args.upload,
                 privacy=args.privacy,
                 yt_token_env=v.get("yt_token_env", "YT_REFRESH_TOKEN"),
+                made_for_kids=preset.get("made_for_kids", False),
+                category_id=preset.get("category_id", "24"),
             )
     else:
         primary_video_path = _render_and_upload(
@@ -231,6 +243,8 @@ def main() -> None:
             upload=args.upload,
             privacy=args.privacy,
             yt_token_env=preset.get("yt_token_env") or "YT_REFRESH_TOKEN",
+            made_for_kids=preset.get("made_for_kids", False),
+            category_id=preset.get("category_id", "24"),
         )
 
     # ── 7. History ───────────────────────────────────────────────────
@@ -256,6 +270,8 @@ def main() -> None:
                 pack.get("youtube_description", ""),
                 privacy_status=args.privacy,
                 refresh_token_env=env_name,
+                made_for_kids=preset.get("made_for_kids", False),
+                category_id=preset.get("category_id", "24"),
             )
             print(f"   Extra channel video: https://www.youtube.com/shorts/{vid_extra}")
 
